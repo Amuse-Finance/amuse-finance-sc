@@ -1,0 +1,29 @@
+{
+	"name": "amuse-SC",
+	"version": "1.0.0",
+	"description": "Amuse Finance smart contract logics",
+	"main": "index.js",
+	"repository": "https://github.com/Amused-Finance/Amuse-SC",
+	"author": "DragonLord",
+	"license": "MIT",
+	"scripts": {
+		"compile": "hardhat compile",
+		"test": "hardhat test"
+	},
+	"dependencies": {
+		"@openzeppelin/contracts": "^4.2.0-rc.0",
+		"@openzeppelin/contracts-upgradeable": "^4.2.0",
+		"@openzeppelin/hardhat-upgrades": "^1.9.0",
+		"dotenv": "^10.0.0",
+		"hardhat": "^2.4.3"
+	},
+	"devDependencies": {
+		"@nomiclabs/hardhat-ethers": "^2.0.2",
+		"@nomiclabs/hardhat-waffle": "^2.0.1",
+		"@openzeppelin/test-helpers": "^0.5.12",
+		"chai": "^4.3.4",
+		"ethereum-waffle": "^3.4.0",
+		"ethers": "^5.4.1",
+		"hardhat-gas-reporter": "^1.0.4"
+	}
+}
