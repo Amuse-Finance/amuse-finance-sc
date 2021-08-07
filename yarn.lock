@@ -588,10 +588,15 @@
   resolved "https://registry.npmjs.org/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.2.0.tgz"
   integrity sha512-vn0hoUqQzgOLzLZwFgh+w/D5hzJHX8F7X/7t/gZdSQYIEXMyGpXUwkr5A3eoAeoc42f/n7yDhwusvBmNknM41Q==
 
-"@openzeppelin/contracts@3.4.1-solc-0.7-2", "@openzeppelin/contracts@^3.4.1-solc-0.7-2":
+"@openzeppelin/contracts@3.4.1-solc-0.7-2":
   version "3.4.1-solc-0.7-2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-3.4.1-solc-0.7-2.tgz#371c67ebffe50f551c3146a9eec5fe6ffe862e92"
   integrity sha512-tAG9LWg8+M2CMu7hIsqHPaTyG4uDzjr6mhvH96LvOpLZZj6tgzTluBt+LsCf1/QaYrlis6pITvpIaIhE+iZB+Q==
+
+"@openzeppelin/contracts@^4.3.0-rc.0":
+  version "4.3.0-rc.0"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.3.0-rc.0.tgz#604403e8f08d79829675347f8d4ff1dbbec46487"
+  integrity sha512-eh+uGU+eC0KE0RYCXHhe2HSZKc7EzJ0n/kUH56AmPhjIOTyJkVPz82nSEVviyUVPpTeNy8kr2z0JfCOEGU88Lw==
 
 "@openzeppelin/hardhat-upgrades@^1.9.0":
   version "1.9.0"

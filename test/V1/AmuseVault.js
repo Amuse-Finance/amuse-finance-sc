@@ -1,4 +1,4 @@
-const { expect, assert } = require("chai");
+const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants");
 
@@ -77,69 +77,6 @@ describe("Amuse Vault", () => {
 		it("should set valutRewardDivisor properly", async () => {
 			const _valutRewardDivisor = await this.amuseVault.valutRewardDivisor();
 			expect(_valutRewardDivisor.toNumber()).to.equal(100);
-		});
-	});
-
-	describe("Stake", () => {
-		const _amount = toWei(100);
-		let initialRewardPool;
-		let _reciept;
-
-		beforeEach(async () => {
-			initialRewardPool = fromWei(await this.token.rewardsPool());
-
-			// approve tokens to stake
-			await this.token
-				.connect(user1)
-				.approve(this.amuseVault.address, toWei(_amount));
-			// stake tokens to pool
-			_reciept = await this.amuseVault.connect(user1).stake(_amount);
-		});
-
-		it("should stake tokens properly", async () => {
-			const { user, stakes } = await this.amuseVault.stakes(user1.address);
-			expect(user).to.equal(user1.address);
-			expect(fromWei(stakes)).to.equal((95).toFixed(1));
-		});
-
-		it("should  validate stakes", async () => {
-			expect(fromWei(await this.token.rewardsPool())).to.equal(
-				(parseFloat(initialRewardPool) + 5).toFixed(1)
-			);
-		});
-	});
-
-	describe("Unstake", () => {
-		const _amount = toWei(100);
-		let initialRewardPool;
-		let initialTokenBalance;
-		let _reciept;
-
-		beforeEach(async () => {
-			// approve tokens to stake
-			await this.token
-				.connect(user1)
-				.approve(this.amuseVault.address, toWei(_amount));
-			// stake tokens to pool
-			await this.amuseVault.connect(user1).stake(_amount);
-			initialRewardPool = fromWei(await this.token.rewardsPool());
-			initialTokenBalance = fromWei(await this.token.balanceOf(user1.address));
-			_reciept = await this.amuseVault.connect(user1).unstake(toWei(20));
-		});
-
-		it("should unstake tokens properly", async () => {
-			const { stakes } = await this.amuseVault.stakes(user1.address);
-			expect(fromWei(stakes)).to.equal((75).toFixed(1));
-		});
-
-		it("should  validate stakes", async () => {
-			expect(fromWei(await this.token.rewardsPool())).to.equal(
-				(parseFloat(initialRewardPool) + 2.45).toFixed(2)
-			);
-
-			expect(fromWei(await this.token.balanceOf(user1.address))).to.equal(
-				initialRewardPool + (17.5).toFixed(2)
-			);
 		});
 	});
 });

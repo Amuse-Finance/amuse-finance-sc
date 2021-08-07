@@ -27,6 +27,10 @@ module.exports = {
 				url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.alchemyApiKey}`,
 			},
 		},
+		rinkeby: {
+			url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.alchemyApiKey}`,
+			chainId: 4,
+		},
 	},
 	solidity: {
 		compilers: [

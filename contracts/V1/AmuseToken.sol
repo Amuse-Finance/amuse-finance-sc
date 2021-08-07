@@ -1,14 +1,17 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.5;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interface/IUniswapV2Factory.sol";
-import "../interface/IUniswapV2Router02.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
-contract AmuseToken is Ownable, IERC20 {
-    IUniswapV2Factory public uniswapV2Factory;
-    IUniswapV2Router02 public uniswapV2Router;
+contract AmuseToken is Ownable, IERC20Metadata {
+    IUniswapV3Factory public uniswapV3Factory;
+
+    address public WETH;
 
     string private _name;
     string private _symbol;
@@ -20,9 +23,6 @@ contract AmuseToken is Ownable, IERC20 {
 
     uint256 public taxPercentage;
     uint256 public taxDivisor;
-
-    uint8 public activate;
-    uint256 private averageGasPrice;
 
     uint256 public rewardsPool;
     uint256 private _initialRewardPool;
@@ -66,7 +66,6 @@ contract AmuseToken is Ownable, IERC20 {
         cashbackPercentage = 1;
         cashbackInterval = 24 hours;
         cashbackDivisor = 100;
-        averageGasPrice = 7 gwei;
 
         uint256 _initalSupply = 20_000_000 ether;
 
@@ -77,12 +76,18 @@ contract AmuseToken is Ownable, IERC20 {
         _mint(_msgSender(), _deployerAmount);
         _mint(address(this),  _initalSupply - _deployerAmount);
 
-        uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        uniswapV2Factory = IUniswapV2Factory(uniswapV2Router.factory());
+        bytes memory _data;
+        ISwapRouter uniswapV3Router = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+        (, _data) = address(uniswapV3Router).call{value: 0}(abi.encodeWithSignature("factory()"));
+        uniswapV3Factory = IUniswapV3Factory(abi.decode(_data, (address)));
+
+        (, _data) = address(uniswapV3Router).call{value: 0}(abi.encodeWithSignature("WETH9()"));
+        WETH = abi.decode(_data, (address));
 
         excluded[address(this)] = true;
-        excluded[address(uniswapV2Router)] = true;
-        excluded[address(uniswapV2Factory)] = true;
+        excluded[address(uniswapV3Factory)] = true;
+        excluded[address(uniswapV3Router)] = true; // SwapRouter address
+        excluded[0xC36442b4a4522E871399CD717aBDD847Ab11FE88] = true; // Uniswap NonfungiblePositionManager address
 
         cashbacks[_msgSender()] = Cashback(_msgSender(), 0, block.timestamp);
 
@@ -102,6 +107,7 @@ contract AmuseToken is Ownable, IERC20 {
     function name() public view virtual override returns (string memory) {
         return _name;
     }
+
 
     function symbol() public view virtual override returns (string memory) {
         return _symbol;
@@ -126,11 +132,6 @@ contract AmuseToken is Ownable, IERC20 {
         _transfer(_msgSender(), recipient, amount);
         uint256 _referrerRewards = _calculateReferrerRewards(amount);
         _transferReferrerFee(_msgSender(), recipient, amount, _referrerRewards);
-
-        /*
-            Note:: Gas refunds is only applicable to all AMD buy actions from users
-        */
-        _refundGas(recipient);
         return true;
     }
 
@@ -281,12 +282,6 @@ contract AmuseToken is Ownable, IERC20 {
         return size > 0;
     }
 
-    function setActivate() external onlyOwner {
-        // This function is invoked after LP has been properly added into the pool
-        require(activate == 0, "AmuseToken: Method have already been invoked");
-        activate = 1;
-    }
-
     function setTaxPercentage(uint256 _percentage, uint256 _divisor) external onlyOwner {
         taxPercentage = _percentage;
         taxDivisor = _divisor;
@@ -331,12 +326,6 @@ contract AmuseToken is Ownable, IERC20 {
         admin = _newAdmin;
     }
 
-    function setAverageGasPrice(uint256 _newAverageGasPrice) external onlyOwner {
-        require(_msgSender() == admin, "AmuseToken: Action revoked");
-        averageGasPrice = _newAverageGasPrice;
-        _refundGas(_msgSender());
-    }
-
     function withdrawStrayTokens(IERC20 _token, uint256 _amount) external onlyOwner returns(uint8) {
         /*
             Conditions for withdrawing stray tokens:
@@ -345,7 +334,7 @@ contract AmuseToken is Ownable, IERC20 {
         */
         require(address(_token) != address(this), "AmuseToken: Validation failed");
 
-        if(address(_token) == uniswapV2Router.WETH()) {
+        if(address(_token) == WETH) {
             (bool _success,) = payable(_msgSender()).call{ value: _amount }("");
             require(_success, "AmuseToken: ETHER withdrawal failed");
             return 1;
@@ -366,10 +355,16 @@ contract AmuseToken is Ownable, IERC20 {
 
     function _refill(uint256 _rewards) internal returns(uint8) {
         if(rewardsPool > _rewards) return 0;
-
         uint256 _diff = _initialRewardPool - rewardsPool;
-        _mint(address(this), _diff);
-        rewardsPool += _diff;
+        uint256 _amount;
+
+        _diff > _rewards
+            ? _amount = _diff
+            : _amount = _diff + _rewards;
+            
+
+        _mint(address(this), _amount);
+        rewardsPool += _amount;
         return 1;
     }
 
@@ -386,7 +381,7 @@ contract AmuseToken is Ownable, IERC20 {
             _balances[_recipient] == 0 || 
             cashbacks[_recipient].timestamp == 0 || 
             excluded[_recipient] ||
-            _recipient == getPair()
+            _isContract(_recipient)
         ) return 0;
         uint256 _lastClaimed = cashbacks[_recipient].timestamp;
 
@@ -437,8 +432,15 @@ contract AmuseToken is Ownable, IERC20 {
         return _referralTaxPercentage;
     }
 
-    function _transferReferrerFee(address _pair, address _buyer, uint256 _purchased, uint256 _rewards) internal returns(uint8) {
-        if(referrers[_buyer] != address(0) && _pair == getPair()) {
+    function _transferReferrerFee(address _pool, address _buyer, uint256 _purchased, uint256 _rewards) internal returns(uint8) {
+        if(
+            referrers[_buyer] != address(0) && 
+            _pool == uniswapV3Factory.getPool(
+                address(this), 
+                WETH, 
+                3000
+            )
+        ) { 
             _transfer(address(this), referrers[_buyer], _rewards);
             emit ReferralReward(_buyer, referrers[_buyer], _purchased, _rewards, block.timestamp);
             return 1;
@@ -447,29 +449,4 @@ contract AmuseToken is Ownable, IERC20 {
         return 0;
     }
     // End Referral Logics
-
-    // Gas Refund Logics
-     function _refundGas(address _user) internal returns(uint8) {
-        if(activate == 0 || _msgSender() != getPair()) return 0;
-        uint256 _gasUsed = averageGasPrice * 50000;
-        uint256[] memory amounts = getAmountsOut(uniswapV2Router.WETH(), address(this), _gasUsed);
-        _mint(_user, amounts[1]);
-        emit GasRefund(_user, amounts[0], block.timestamp);
-        return 1;
-    }
-    // End Gas Refund Logics
-
-    // Uniswap logics
-    function getPair() public view returns(address pair) {
-        pair = uniswapV2Factory.getPair(address(this), uniswapV2Router.WETH());
-        return pair;
-    }
-
-    function getAmountsOut(address token1, address token2, uint256 _amount) public view returns(uint256[] memory amounts) {
-        address[] memory path = new address[](2);
-        path[0] = token1;
-        path[1] = token2;
-        amounts = uniswapV2Router.getAmountsOut(_amount, path);
-        return amounts;
-    }
 }

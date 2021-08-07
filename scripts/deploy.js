@@ -1,10 +1,11 @@
-const { ethers, upgrades } = require("hardhat");
+const { deploy } = require("@openzeppelin/hardhat-upgrades/dist/utils");
+const { ethers } = require("hardhat");
 
 const main = async () => {
 	const AmuseToken = await ethers.getContractFactory("AmuseToken");
 	const AmuseExchange = await ethers.getContractFactory("AmuseExchange");
 
-	const amuseToken = await upgrades.deployProxy(AmuseToken, []);
+	const amuseToken = deploy(AmuseToken);
 	const amuseExchange = await upgrades.deployProxy(AmuseExchange, [
 		amuseToken.address,
 	]);
