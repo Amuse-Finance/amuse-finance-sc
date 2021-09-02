@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.5;
+pragma solidity 0.8.7;
 pragma abicoder v2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "./interface/IUniswapV2Factory.sol";
+import "./interface/IUniswapV2Router02.sol";
 
 contract AmuseToken is Ownable, IERC20Metadata {
-    IUniswapV3Factory public uniswapV3Factory;
-
-    address public WETH;
+    IUniswapV2Factory public uniswapV2Factory;
+    IUniswapV2Router02 public uniswapV2Router02;
 
     string private _name;
     string private _symbol;
@@ -28,7 +26,6 @@ contract AmuseToken is Ownable, IERC20Metadata {
     uint256 private _initialRewardPool;
 
     address public AmusedVault;
-    address public admin;
 
     bytes32 public DOMAIN_SEPARATOR;
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
@@ -36,8 +33,8 @@ contract AmuseToken is Ownable, IERC20Metadata {
     mapping(address => uint) public nonces;
 
 
-    mapping (address => uint256) private _balances;
-    mapping (address => mapping (address => uint256)) private _allowances;
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping (address => uint256)) private _allowances;
     mapping(address => bool) public excluded;
     mapping(address => Cashback) public cashbacks;
     mapping(address => address) public referrers;
@@ -76,20 +73,12 @@ contract AmuseToken is Ownable, IERC20Metadata {
         _mint(_msgSender(), _deployerAmount);
         _mint(address(this),  _initalSupply - _deployerAmount);
 
-        bytes memory _data;
-        ISwapRouter uniswapV3Router = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
-        (, _data) = address(uniswapV3Router).call{value: 0}(abi.encodeWithSignature("factory()"));
-        uniswapV3Factory = IUniswapV3Factory(abi.decode(_data, (address)));
-
-        (, _data) = address(uniswapV3Router).call{value: 0}(abi.encodeWithSignature("WETH9()"));
-        WETH = abi.decode(_data, (address));
-
-        excluded[address(this)] = true;
-        excluded[address(uniswapV3Factory)] = true;
-        excluded[address(uniswapV3Router)] = true; // SwapRouter address
-        excluded[0xC36442b4a4522E871399CD717aBDD847Ab11FE88] = true; // Uniswap NonfungiblePositionManager address
+        uniswapV2Router02 = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        uniswapV2Factory = IUniswapV2Factory(uniswapV2Router02.factory());
 
         cashbacks[_msgSender()] = Cashback(_msgSender(), 0, block.timestamp);
+
+        excluded[address(uniswapV2Router02)] = true;
 
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
@@ -107,7 +96,6 @@ contract AmuseToken is Ownable, IERC20Metadata {
     function name() public view virtual override returns (string memory) {
         return _name;
     }
-
 
     function symbol() public view virtual override returns (string memory) {
         return _symbol;
@@ -258,16 +246,15 @@ contract AmuseToken is Ownable, IERC20Metadata {
         return(_finalAmount, _taxAmount);
     }
 
-    // Untracked
     function _distibuteTax(uint256 _tax) internal returns(uint8) {
         if(_tax == 0) return 0;
         uint256 _splitedTax = _tax / 4;
 
         // 50% of the collected tax is injected into rewardsPool
         rewardsPool += (_splitedTax * 2);
-        // 25% of the collected tax is burnt from the totalsupply
+        // 25% of the collected tax is burnt from the total supply
         _burn(address(this), _splitedTax);
-        // the remaining 25% tax is issued to the refferer of the current buyer else it is added into the "rewardsPool"
+        // the remaining 25% tax is issued to the referrer of the current buyer else it is added into the "rewardsPool"
         return 1;
     }
 
@@ -321,28 +308,23 @@ contract AmuseToken is Ownable, IERC20Metadata {
         return 1;
     }
 
-    function setAdmin(address _newAdmin) external onlyOwner {
-        require(_newAdmin != address(0), "AmuseToken: New Admin can not be zero address");
-        admin = _newAdmin;
-    }
-
     function withdrawStrayTokens(IERC20 _token, uint256 _amount) external onlyOwner returns(uint8) {
         /*
             Conditions for withdrawing stray tokens:
                 1. Caller must be the owner
                 2. Token address must not equal Current contract address (AMD Token)
         */
-        require(address(_token) != address(this), "AmuseToken: Validation failed");
+        require(address(_token) != address(this), "AmuseToken: Can not withdraw AMD token");
 
-        if(address(_token) == WETH) {
+        if(address(_token) == uniswapV2Router02.WETH()) {
             (bool _success,) = payable(_msgSender()).call{ value: _amount }("");
             require(_success, "AmuseToken: ETHER withdrawal failed");
-            return 1;
+            return 0;
         }
         
         uint256 _balance = _token.balanceOf(address(this));
         _token.transfer(_msgSender(), _balance);
-        return 2;
+        return 1;
     }
 
     function sync() external {
@@ -435,10 +417,9 @@ contract AmuseToken is Ownable, IERC20Metadata {
     function _transferReferrerFee(address _pool, address _buyer, uint256 _purchased, uint256 _rewards) internal returns(uint8) {
         if(
             referrers[_buyer] != address(0) && 
-            _pool == uniswapV3Factory.getPool(
+            _pool == uniswapV2Factory.getPair(
                 address(this), 
-                WETH, 
-                3000
+                uniswapV2Router02.WETH()
             )
         ) { 
             _transfer(address(this), referrers[_buyer], _rewards);

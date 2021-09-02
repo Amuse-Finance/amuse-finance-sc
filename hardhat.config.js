@@ -1,5 +1,4 @@
 require("@nomiclabs/hardhat-waffle");
-require("@openzeppelin/hardhat-upgrades");
 require("hardhat-gas-reporter");
 
 require("dotenv/config");
@@ -24,7 +23,8 @@ module.exports = {
 	networks: {
 		hardhat: {
 			forking: {
-				url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.alchemyApiKey}`,
+				url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.alchemyApiKey}`,
+				blockNumber: 9131926,
 			},
 		},
 		rinkeby: {
@@ -34,7 +34,7 @@ module.exports = {
 	},
 	solidity: {
 		compilers: [
-			{ version: "0.8.5" },
+			{ version: "0.8.7" },
 			{ version: "0.7.0" },
 			{ version: "0.7.6" },
 		],

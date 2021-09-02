@@ -1,16 +1,29 @@
-const { deploy } = require("@openzeppelin/hardhat-upgrades/dist/utils");
-const { ethers } = require("hardhat");
+// We require the Hardhat Runtime Environment explicitly here. This is optional
+// but useful for running the script in a standalone fashion through `node <script>`.
+//
+// When running the script with `npx hardhat run <script>` you'll find the Hardhat
+// Runtime Environment's members available in the global scope.
+const hre = require("hardhat");
 
-const main = async () => {
-	const AmuseToken = await ethers.getContractFactory("AmuseToken");
-	const AmuseExchange = await ethers.getContractFactory("AmuseExchange");
+async function main() {
+	// Hardhat always runs the compile task when running scripts with its command
+	// line interface.
+	//
+	// If this script is run directly using `node` you may want to call compile
+	// manually to make sure everything is compiled
+	// await hre.run('compile');
 
-	const amuseToken = deploy(AmuseToken);
-	const amuseExchange = await upgrades.deployProxy(AmuseExchange, [
-		amuseToken.address,
-	]);
-	console.log("done");
-};
+	// We get the contract to deploy
+	const AmuseNFT = await hre.ethers.getContractFactory("AmuseNFT");
+	const amuseNFT = await AmuseNFT.deploy();
+
+	await amuseNFT.deployed();
+
+	console.log("Greeter deployed to:", amuseNFT.address);
+}
+
+// We recommend this pattern to be able to use async/await everywhere
+// and properly handle errors.
 main()
 	.then(() => process.exit(0))
 	.catch((error) => {
