@@ -3,8 +3,8 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./interface/IUniswapV2Factory.sol";
-import "./interface/IUniswapV2Router02.sol";
+import "../interface/IUniswapV2Factory.sol";
+import "../interface/IUniswapV2Router02.sol";
 
 import "../interface/IAmused.sol";
 

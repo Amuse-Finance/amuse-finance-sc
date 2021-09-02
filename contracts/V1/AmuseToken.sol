@@ -4,8 +4,8 @@ pragma abicoder v2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "./interface/IUniswapV2Factory.sol";
-import "./interface/IUniswapV2Router02.sol";
+import "../interface/IUniswapV2Factory.sol";
+import "../interface/IUniswapV2Router02.sol";
 
 contract AmuseToken is Ownable, IERC20Metadata {
     IUniswapV2Factory public uniswapV2Factory;
