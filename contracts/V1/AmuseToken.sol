@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "../interface/IUniswapV2Factory.sol";
 import "../interface/IUniswapV2Router02.sol";
 
-contract AmuseToken is Ownable, IERC20Metadata {
+contract AmuseTokenV1 is Ownable, IERC20Metadata {
     IUniswapV2Factory public uniswapV2Factory;
     IUniswapV2Router02 public uniswapV2Router02;
 

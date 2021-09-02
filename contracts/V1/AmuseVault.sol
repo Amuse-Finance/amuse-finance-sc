@@ -10,7 +10,7 @@ import "../interface/IAmused.sol";
 
 import "hardhat/console.sol";
 
-contract AmuseVault is Ownable, ReentrancyGuard {
+contract AmuseVaultV1 is Ownable, ReentrancyGuard {
     IUniswapV2Factory public uniswapV2Factory;
     IUniswapV2Router02 public uniswapV2Router02;
     IAmused public AmuseToken;
