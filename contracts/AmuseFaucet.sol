@@ -13,6 +13,12 @@ contract AmuseFaucet is Ownable {
     
     event Deposit(address user, uint256 amount, uint256 timestamp);
     event Faucet(address account, uint256  amount, uint256 timestamp);
+
+    modifier isValidWithdrawal(address _account) {
+        require(block.timestamp > lastWithdrawTime[_account] + faucetInterval, "AmuseFaucet: Faucet has already been issued to address");
+        _;
+        lastWithdrawTime[_account] = block.timestamp;
+    }
     
     constructor(IERC20 _amusedToken) {
         AmusedToken = _amusedToken;
@@ -23,18 +29,10 @@ contract AmuseFaucet is Ownable {
         revert();
     }
     
-    function requestFaucet(address _account, uint256 _amount) external {
-        require(isValidWithdrawal(_account));
-        
-        lastWithdrawTime[_account] = block.timestamp;
+    function requestFaucet(address _account, uint256 _amount) external isValidWithdrawal(_account) {        
         totalLockedAmount -= _amount;
         AmusedToken.transfer(_account, _amount);
         emit Faucet(_account, _amount, block.timestamp);
-    }
-    
-    function isValidWithdrawal(address _account) public view returns(bool) {
-        require(block.timestamp > lastWithdrawTime[_account] + faucetInterval, "AmuseFaucet: Faucet has already been issued to address");
-        return true;
     }
     
     function withdrawToken(uint256 _amount) external onlyOwner {
